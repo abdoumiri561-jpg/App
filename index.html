@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#006233">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>منصة ثانوية بالقاسم شاطور - الجزائر</title>
+    
+    <link rel="manifest" id="pwa-manifest">
+    <link rel="apple-touch-icon" href="https://img.icons8.com/color/512/school.png">
+
+    <!-- مكتبة Supabase لرفع الفيديوهات مهما كان حجمها -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- مكتبة Firebase Firestore لإدارة المنشورات -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbU4io3s136TdHsCrB0OQYoYbzAjKcLKc",
+            authDomain: "chetour-school.firebaseapp.com",
+            projectId: "chetour-school",
+            storageBucket: "chetour-school.firebasestorage.app",
+            messagingSenderId: "43512603553",
+            appId: "1:43512603553:web:d15b40a9507ea675ada1e0",
+            measurementId: "G-L8P49B1J1G"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.db = db;
+        window.firebaseModules = { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, serverTimestamp };
+        
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof loadPosts === 'function') loadPosts();
+        });
+    </script>
+
+    <style>
+        :root {
+            --primary: #006233;
+            --primary-dark: #004d28;
+            --accent: #d21034;
+            --bg-gradient: linear-gradient(135deg, #006233 0%, #003319 100%);
+            --card-bg: rgba(255, 255, 255, 0.96);
+            --text: #1f2937;
+        }
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: #f4f6f8;
+            background-image: radial-gradient(#006233 0.6px, transparent 0.6px);
+            background-size: 25px 25px;
+            color: var(--text);
+            min-height: 100vh;
+        }
+        header {
+            background: var(--bg-gradient);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 98, 51, 0.3);
+            border-bottom: 5px solid var(--accent);
+        }
+        .logo-area h1 {
+            font-size: 1.2rem;
+            font-weight: 800;
+        }
+        .logo-area p {
+            font-size: 0.75rem;
+            color: #e2e8f0;
+            margin-top: 2px;
+        }
+        .header-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: white;
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+        .btn-install {
+            background: var(--accent);
+            border-color: var(--accent);
+            display: none;
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            width: 100%;
+            padding: 0.9rem;
+            border-radius: 12px;
+            border: none;
+            font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(0, 98, 51, 0.3);
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-dark);
+        }
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .container {
+            max-width: 680px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .welcome-card {
+            background: var(--bg-gradient);
+            color: white;
+            padding: 2rem;
+            border-radius: 24px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 98, 51, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+        .welcome-card h2 {
+            font-size: 1.4rem;
+            margin-bottom: 0.8rem;
+        }
+        .welcome-card ol {
+            padding-right: 1.2rem;
+            margin-top: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.8;
+            color: #f0fdf4;
+        }
+        #teacher-panel {
+            display: none;
+            background: var(--card-bg);
+            padding: 1.8rem;
+            border-radius: 20px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border: 2px solid var(--primary);
+        }
+        textarea, input[type="text"], input[type="password"], input[type="file"] {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            margin-bottom: 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            outline: none;
+            background: #fff;
+        }
+        textarea:focus, input:focus {
+            border-color: var(--primary);
+        }
+        /* شريط تقدم الرفع للملفات الكبيرة */
+        #upload-progress-container {
+            display: none;
+            margin-bottom: 1rem;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 24px;
+            position: relative;
+        }
+        #upload-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+        #upload-progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #111827;
+        }
+        .post-card {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+        }
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #4b5563;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #f3f4f6;
+            padding-bottom: 0.6rem;
+        }
+        .badge {
+            background: #e6f4ed;
+            color: var(--primary);
+            padding: 0.3rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .post-content {
+            font-size: 1.05rem;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+            white-space: pre-wrap;
+        }
+        .post-media img, .post-media video, .post-media iframe {
+            width: 100%;
+            max-height: 450px;
+            object-fit: contain;
+            background: #000;
+            border-radius: 14px;
+            margin-top: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border: none;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(8px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-box {
+            background: white;
+            padding: 2.5rem 2rem;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute;
+            top: 15px; left: 20px;
+            font-size: 1.8rem;
+            cursor: pointer;
+            color: #9ca3af;
+        }
+        .error-msg {
+            color: var(--accent);
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+            background: #fdf2f2;
+            padding: 8px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo-area">
+            <h1>الجمهورية الجزائرية الديمقراطية الشعبية</h1>
+            <p>ثانوية بالقاسم شاطور - الفضاء الرسمي</p>
+        </div>
+        <div class="header-actions">
+            <button id="install-btn" class="btn btn-install">📲 تثبيت التطبيق</button>
+            <button id="auth-btn" class="btn" onclick="openModal()">🔑 فضاء الأساتذة</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <section class="welcome-card">
+            <h2>✨ أهلاً بك في منصة ثانوية بالقاسم شاطور</h2>
+            <p>المنصة الرسمية المخصصة لنشر الدروس، الملخصات، والفيديوهات التعليمية لجميع التلاميذ.</p>
+            <ol>
+                <li><strong>تثبيت التطبيق:</strong> اضغط على زر "تثبيت التطبيق" بالأعلى ليكون التطبيق على شاشة هاتفك الرئيسية.</li>
+                <li><strong>متابعة الدروس:</strong> تصفح الأسفل لمشاهدة أحدث دروس الأساتذة والفيديوهات التعليمية مباشرة.</li>
+                <li><strong>خاصية الأساتذة:</strong> مخصصة فقط للأساتذة عبر الكود السري لرفع الفيديوهات والدروس مهما كان حجمها.</li>
+            </ol>
+        </section>
+
+        <!-- لوحة النشر الخاصة بالأساتذة -->
+        <section id="teacher-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="color: var(--primary);">📝 لوحة نشر الدروس والفيديوهات</h2>
+                <button onclick="logoutTeacher()" style="background:none; border:none; color:var(--accent); cursor:pointer; font-weight:bold;">تسجيل الخروج</button>
+            </div>
+            
+            <input type="text" id="teacher-name" placeholder="اسم الأستاذ والمادة (مثال: أستاذ الفيزياء)">
+            <textarea id="post-text" rows="3" placeholder="اكتب وصف الدرس أو الإعلان هنا..."></textarea>
+            
+            <label style="font-size: 0.9rem; color: #006233; display: block; margin-bottom: 5px; font-weight: bold;">🎥 اختر ملف فيديو مباشر من هاتفك (يدعم أي حجم مهما كان كبيراً):</label>
+            <input type="file" id="direct-video-file" accept="video/*">
+
+            <label style="font-size: 0.85rem; color: #4b5563; display: block; margin-bottom: 5px; font-weight: 600;">🖼️ أو اختر صورة توضيحية (اختياري):</label>
+            <input type="file" id="media-file" accept="image/*">
+
+            <label style="font-size: 0.85rem; color: #4b5563; display: block; margin-bottom: 5px; font-weight: 600;">🔗 أو ألصق رابط يوتيوب خارجي (اختياري):</label>
+            <input type="text" id="video-url-input" placeholder="https://youtube.com/...">
+
+            <!-- شريط تقدم رفع الفيديو -->
+            <div id="upload-progress-container">
+                <div id="upload-progress-bar"></div>
+                <span id="upload-progress-text">جاري تحضير الرفع... 0%</span>
+            </div>
+
+            <button id="publish-btn" class="btn-primary" onclick="publishPost()">🚀 رفع ونشر الدرس فوراً للجميع</button>
+        </section>
+
+        <section id="feed">
+            <div class="post-card">
+                <div class="post-header">
+                    <span class="badge">إدارة المؤسسة</span>
+                    <span style="font-size: 0.8rem; color: #9ca3af;">منشور مثبت</span>
+                </div>
+                <div class="post-content">مرحباً بكل تلاميذ وأساتذة ثانوية بالقاسم شاطور. أُنشئت هذه المنصة لتكون جسراً للتواصل ونشر الدروس والفيديوهات بكل سهولة.</div>
+            </div>
+        </section>
+    </div>
+
+    <!-- نافذة الرمز السري -->
+    <div id="login-modal" class="modal-overlay">
+        <div class="modal-box">
+            <span class="close-btn" onclick="closeModal()">&times;</span>
+            <h3 style="margin-bottom: 0.5rem; color: #1e2937;">فضاء الأساتذة فقط</h3>
+            <p style="font-size: 0.9rem; color: #6b7280; margin-bottom: 1.5rem;">الرجاء إدخال كود الأستاذ الخاص (PROF2026) لفتح لوحة النشر:</p>
+            <input type="password" id="secret-code-input" placeholder="أدخل الكود هنا...">
+            <p id="error-msg" class="error-msg">الكود غير صحيح! هذه الخاصية مخصصة للأساتذة فقط.</p>
+            <button class="btn-primary" onclick="verifyCode()">تأكيد ودخول</button>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // إعدادات Supabase لرفع الفيديوهات كبيرة الحجم
+        // ضع بيانات مشروعك من Supabase هنا:
+        const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const BUCKET_NAME = 'school-videos';
+        // ==========================================
+
+        let supabaseClient = null;
+        if (SUPABASE_URL.startsWith('https://') && !SUPABASE_URL.includes('YOUR_PROJECT_ID')) {
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        // PWA Setup
+        const manifestData = {
+            "name": "منصة ثانوية بالقاسم شاطور",
+            "short_name": "شاطور للتعليم",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#006233",
+            "theme_color": "#006233",
+            "icons": [{
+                "src": "https://img.icons8.com/color/512/school.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }]
+        };
+        const manifestBlob = new Blob([JSON.stringify(manifestData)], {type: 'application/json'});
+        document.getElementById('pwa-manifest').setAttribute('href', URL.createObjectURL(manifestBlob));
+
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = 'inline-block';
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') installBtn.style.display = 'none';
+                deferredPrompt = null;
+            }
+        });
+
+        // نظام الدخول للأساتذة
+        const VALID_CODE = "PROF2026";
+        const modal = document.getElementById('login-modal');
+        const teacherPanel = document.getElementById('teacher-panel');
+        const authBtn = document.getElementById('auth-btn');
+        const errorMsg = document.getElementById('error-msg');
+
+        window.onload = () => {
+            if (localStorage.getItem('isTeacherAuthenticated') === 'true') {
+                enableTeacherMode();
+            }
+        };
+
+        function openModal() {
+            modal.style.display = 'flex';
+            errorMsg.style.display = 'none';
+            document.getElementById('secret-code-input').value = '';
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        function verifyCode() {
+            const enteredCode = document.getElementById('secret-code-input').value.trim();
+            if (enteredCode === VALID_CODE) {
+                localStorage.setItem('isTeacherAuthenticated', 'true');
+                closeModal();
+                enableTeacherMode();
+            } else {
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        function enableTeacherMode() {
+            teacherPanel.style.display = 'block';
+            authBtn.style.display = 'none';
+            loadPosts();
+        }
+
+        function logoutTeacher() {
+            localStorage.removeItem('isTeacherAuthenticated');
+            teacherPanel.style.display = 'none';
+            authBtn.style.display = 'inline-block';
+            loadPosts();
+        }
+
+        // خوارزمية رفع الفيديو المباشر مهما كان حجمه إلى السحابة
+        async function uploadLargeVideo(file) {
+            if (!supabaseClient) {
+                throw new Error("يرجى وضع رابط ومفتاح Supabase في الكود لتفعيل الرفع المباشر للفيديوهات الكبيرة.");
+            }
+
+            const progressContainer = document.getElementById('upload-progress-container');
+            const progressBar = document.getElementById('upload-progress-bar');
+            const progressText = document.getElementById('upload-progress-text');
+
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '15%';
+            progressText.innerText = `جاري رفع الفيديو (${(file.size / (1024 * 1024)).toFixed(1)} MB)... يرجى الانتظار`;
+
+            // إنشاء اسم فريد للملف لتجنب التداخل
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+
+            // محاكاة تقدم الشريط أثناء الرفع السحابي
+            let fakeProgress = 15;
+            const progressInterval = setInterval(() => {
+                if (fakeProgress < 90) {
+                    fakeProgress += 5;
+                    progressBar.style.width = `${fakeProgress}%`;
+                    progressText.innerText = `جاري الرفع إلى السحابة... ${fakeProgress}%`;
+                }
+            }, 800);
+
+            try {
+                const { data, error } = await supabaseClient.storage
+                    .from(BUCKET_NAME)
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                clearInterval(progressInterval);
+
+                if (error) throw error;
+
+                progressBar.style.width = '100%';
+                progressText.innerText = 'اكتمل الرفع بنجاح! 100%';
+
+                // استخراج الرابط العام المباشر للفيديو
+                const { data: publicUrlData } = supabaseClient.storage
+                    .from(BUCKET_NAME)
+                    .getPublicUrl(fileName);
+
+                return publicUrlData.publicUrl;
+
+            } catch (err) {
+                clearInterval(progressInterval);
+                progressContainer.style.display = 'none';
+                throw err;
+            }
+        }
+
+        function formatVideoUrl(url) {
+            if (!url) return '';
+            if (url.includes('youtube.com/shorts/')) {
+                return `https://www.youtube.com/embed/${url.split('youtube.com/shorts/')[1].split('?')[0]}`;
+            }
+            if (url.includes('youtu.be/')) {
+                return `https://www.youtube.com/embed/${url.split('youtu.be/')[1].split('?')[0]}`;
+            }
+            if (url.includes('watch?v=')) {
+                return `https://www.youtube.com/embed/${url.split('watch?v=')[1].split('&')[0]}`;
+            }
+            return url;
+        }
+
+        async function publishPost() {
+            const author = document.getElementById('teacher-name').value.trim() || "أستاذ بالمؤسسة";
+            const text = document.getElementById('post-text').value.trim();
+            const directVideoInput = document.getElementById('direct-video-file');
+            const directVideoFile = directVideoInput.files[0];
+            const imageInput = document.getElementById('media-file');
+            const imageFile = imageInput.files[0];
+            const videoUrlInput = document.getElementById('video-url-input').value.trim();
+            const publishBtn = document.getElementById('publish-btn');
+
+            if (!text && !directVideoFile && !imageFile && !videoUrlInput) {
+                alert("يرجى اختيار فيديو أو كتابة نص قبل النشر.");
+                return;
+            }
+
+            publishBtn.disabled = true;
+            publishBtn.innerText = "جاري معالجة ورفع المحتوى... ⏳";
+
+            try {
+                let mediaUrl = null;
+                let mediaType = null;
+                let directVideoUrl = null;
+                let externalVideoUrl = formatVideoUrl(videoUrlInput);
+
+                // 1. رفع الفيديو المباشر مهما كان حجمه
+                if (directVideoFile) {
+                    directVideoUrl = await uploadLargeVideo(directVideoFile);
+                }
+
+                // 2. معالجة الصورة إن وجدت
+                if (imageFile) {
+                    mediaType = 'image';
+                    mediaUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => resolve(e.target.result);
+                        reader.onerror = (error) => reject(error);
+                        reader.readAsDataURL(imageFile);
+                    });
+                }
+
+                const timeStr = new Date().toLocaleTimeString('ar-DZ', { hour: '2-digit', minute: '2-digit' });
+                const postData = {
+                    author,
+                    content: text,
+                    mediaUrl,
+                    mediaType,
+                    directVideoUrl, // رابط الفيديو المرفوع مباشرة
+                    videoUrl: externalVideoUrl,
+                    timeStr,
+                    createdAt: window.firebaseModules.serverTimestamp()
+                };
+
+                if (window.db) {
+                    const { collection, addDoc } = window.firebaseModules;
+                    await addDoc(collection(window.db, "posts"), postData);
+                }
+
+                alert("تم رفع الفيديو ونشر الدرس بنجاح لجميع التلاميذ!");
+                document.getElementById('post-text').value = '';
+                document.getElementById('video-url-input').value = '';
+                directVideoInput.value = '';
+                imageInput.value = '';
+                document.getElementById('upload-progress-container').style.display = 'none';
+                loadPosts();
+
+            } catch (err) {
+                console.error(err);
+                alert("حدث خطأ أثناء الرفع: " + err.message);
+            } finally {
+                publishBtn.disabled = false;
+                publishBtn.innerText = "🚀 رفع ونشر الدرس فوراً للجميع";
+            }
+        }
+
+        async function loadPosts() {
+            if (!window.db) return;
+            try {
+                const { collection, getDocs, query, orderBy } = window.firebaseModules;
+                const q = query(collection(window.db, "posts"), orderBy("createdAt", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                const feed = document.getElementById('feed');
+                const pinnedPost = feed.lastElementChild;
+                feed.innerHTML = '';
+
+                querySnapshot.forEach((docSnap) => {
+                    const post = docSnap.data();
+                    renderPostCard(
+                        docSnap.id, 
+                        post.author, 
+                        post.content, 
+                        post.mediaUrl, 
+                        post.mediaType, 
+                        post.directVideoUrl, 
+                        post.videoUrl, 
+                        post.timeStr
+                    );
+                });
+
+                if (pinnedPost) feed.appendChild(pinnedPost);
+            } catch (err) {
+                console.error("خطأ في جلب المنشورات:", err);
+            }
+        }
+
+        async function deletePost(postId) {
+            if (!confirm("هل أنت متأكد من رغبتك في حذف هذا المنشور نهائياً؟")) return;
+            try {
+                const { deleteDoc, doc } = window.firebaseModules;
+                await deleteDoc(doc(window.db, "posts", postId));
+                loadPosts();
+            } catch (err) {
+                console.error("خطأ أثناء الحذف:", err);
+                alert("تعذر حذف المنشور.");
+            }
+        }
+
+        function renderPostCard(id, author, text, mediaUrl, mediaType, directVideoUrl, videoUrl, timeStr) {
+            const feed = document.getElementById('feed');
+            const postCard = document.createElement('div');
+            postCard.className = 'post-card';
+
+            let mediaHTML = '';
+            
+            // عرض الفيديو المرفوع مباشرة عبر مشغل HTML5 الأصلي (يدعم التقديم والتأخير والتحميل)
+            if (directVideoUrl) {
+                mediaHTML += `
+                    <div class="post-media">
+                        <video controls playsinline preload="metadata">
+                            <source src="${directVideoUrl}" type="video/mp4">
+                            متصفحك لا يدعم تشغيل الفيديو.
+                        </video>
+                    </div>`;
+            }
+
+            if (mediaUrl && mediaType === 'image') {
+                mediaHTML += `<div class="post-media"><img src="${mediaUrl}" alt="صورة مرفقة"></div>`;
+            }
+
+            if (videoUrl) {
+                mediaHTML += `<div class="post-media"><iframe src="${videoUrl}" allowfullscreen></iframe></div>`;
+            }
+
+            const isAuth = localStorage.getItem('isTeacherAuthenticated') === 'true';
+            let deleteBtnHTML = isAuth ? `<button onclick="deletePost('${id}')" style="background:#fdf2f2; color:var(--accent); border:1px solid #fecaca; padding:4px 10px; border-radius:8px; cursor:pointer; font-size:0.8rem; font-weight:bold;">🗑️ حذف</button>` : '';
+
+            postCard.innerHTML = `
+                <div class="post-header">
+                    <span class="badge">${author}</span>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <span style="font-size: 0.8rem; color: #9ca3af;">${timeStr || ''}</span>
+                        ${deleteBtnHTML}
+                    </div>
+                </div>
+                <div class="post-content">${text}</div>
+                ${mediaHTML}
+            `;
+
+            const pinnedPost = feed.lastElementChild;
+            feed.insertBefore(postCard, pinnedPost);
+        }
+    </script>
+</body>
+</html>
